@@ -1,13 +1,4 @@
----
-title: "An analysis of University Admission Data"
-author: "Rohan Taneja"
-date: "`r Sys.Date()`"
-output: pdf_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+### University Admissions Data Analysis
 
 ## Introduction
 
