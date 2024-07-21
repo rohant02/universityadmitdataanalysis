@@ -1,0 +1,218 @@
+# Questions we wish to answer thru this EDA
+# 
+# 1. How do the number of applications, acceptances, and enrollments vary across institutions?
+# 2. What is the acceptance rate and enrollment rate for each institution, and how do these rates vary 
+#    between private and public institutions?
+# 3. What is the relationship between the percentage of students in the top 10% and top 25% of their high school class and the acceptance rate?
+# 4. How does the student-to-faculty ratio impact the graduation rate?  
+
+
+# Explanation of the data:
+# - Apps: Number of applications received
+# - Accept: Number of applications accepted
+# - Enroll: Number of new students enrolled
+# - Top10perc: Percentage of new students from top 10% of high school class
+# - Top25perc: Percentage of new students from top 25% of high school class
+# - F.Undergrad: Number of full-time undergraduates
+# - P.Undergrad: Number of part-time undergraduates
+# - Outstate: Out-of-state tuition
+# - Room.Board: Room and board costs
+# - Books: Estimated book costs
+# - Personal: Estimated personal spending
+# - PhD: Percentage of faculty with Ph.D.’s
+# - Terminal: Percentage of faculty with terminal degree
+# - S.F.Ratio: Student/faculty ratio
+# - perc.alumni: Percentage of alumni who donate
+# - Expend: Instructional expenditure per student
+# - Grad.Rate: Graduation rate
+
+# And then we add some more columns:
+#   AcceptanceRate
+#   EnrollmentRate
+#   Type_of_institution
+
+
+install('stargazer')
+
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(gridExtra)
+library(corrplot)
+library(maps)
+library(ggmap)
+library(zipcodeR)
+
+
+# Load the data
+data <- read.csv('Kmeans_assignment_data.csv')
+
+# View the structure of the dataset
+str(data)
+
+# Check for NA values
+colSums(is.na(data))
+
+
+
+
+
+
+# Data Wrangling
+# Create new columns for acceptance rate and enrollment rate
+data <- data %>%
+  mutate(AcceptanceRate = Accept / Apps * 100,
+         EnrollmentRate = Enroll / Accept * 100)
+# Creating a new column for type of instituiton.
+data <- data %>%
+  mutate(Type_of_institution = ifelse(Private == "Yes", "Private", "Public"))
+
+
+# Visual EDA
+# Plot the distribution of numerical variables
+p1 <- ggplot(data, aes(x = Apps)) + 
+  geom_histogram(binwidth = 500, fill = "blue", color = "black") + 
+  labs(title = "Distribution of Applications", x = "Applications", y = "Frequency")
+
+p2 <- ggplot(data, aes(x = Accept)) + 
+  geom_histogram(binwidth = 500, fill = "green", color = "black") + 
+  labs(title = "Distribution of Acceptances", x = "Acceptances", y = "Frequency")
+
+p3 <- ggplot(data, aes(x = Enroll)) + 
+  geom_histogram(binwidth = 200, fill = "red", color = "black") + 
+  labs(title = "Distribution of Enrollments", x = "Enrollments", y = "Frequency")
+
+p4 <- ggplot(data, aes(x = AcceptanceRate)) + 
+  geom_histogram(binwidth = 5, fill = "purple", color = "black") + 
+  labs(title = "Distribution of Acceptance Rate", x = "Acceptance Rate (%)", y = "Frequency")
+
+p5 <- ggplot(data, aes(x = EnrollmentRate)) + 
+  geom_histogram(binwidth = 5, fill = "orange", color = "black") + 
+  labs(title = "Distribution of Enrollment Rate", x = "Enrollment Rate (%)", y = "Frequency")
+
+p6 <- ggplot(data, aes(x = Grad.Rate)) + 
+  geom_histogram(binwidth = 5, fill = "cyan", color = "black") + 
+  labs(title = "Distribution of Graduation Rate", x = "Graduation Rate (%)", y = "Frequency")
+
+grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 2)
+
+# Boxplots of Applications, Acceptances, and Enrollments by institution type
+p7 <- ggplot(data, aes(x = Type_of_institution, y = Apps)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(title = "Applications by Institution Type", x = "Institution Type", y = "Applications")
+
+p8 <- ggplot(data, aes(x = Type_of_institution, y = Accept)) +
+  geom_boxplot(fill = "lightgreen") +
+  labs(title = "Acceptances by Institution Type", x = "Institution Type", y = "Acceptances")
+
+p9 <- ggplot(data, aes(x = Type_of_institution, y = Enroll)) +
+  geom_boxplot(fill = "lightcoral") +
+  labs(title = "Enrollments by Institution Type", x = "Institution Type", y = "Enrollments")
+
+grid.arrange(p7, p8, p9, ncol = 3)
+
+# Scatter plots to investigate relationships
+p10 <- ggplot(data, aes(x = Top10perc, y = AcceptanceRate)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Acceptance Rate vs. Top 10% High School Class Percentage", x = "Top 10% High School Class (%)", y = "Acceptance Rate (%)")
+
+p11 <- ggplot(data, aes(x = Top25perc, y = AcceptanceRate)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(title = "Acceptance Rate vs. Top 25% High School Class Percentage", x = "Top 25% High School Class (%)", y = "Acceptance Rate (%)")
+
+p12 <- ggplot(data, aes(x = S.F.Ratio, y = Grad.Rate)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "purple") +
+  labs(title = "Graduation Rate vs. Student-to-Faculty Ratio", x = "Student-to-Faculty Ratio", y = "Graduation Rate (%)")
+
+grid.arrange(p10, p11, p12, ncol = 2)
+
+
+
+#Here we create a heat-map looking at the relation between variables
+
+
+# Select only the numerical columns for the correlation matrix
+numerical_data <- data %>%
+  select(Apps, Accept, Enroll, Top10perc, Top25perc, F.Undergrad, P.Undergrad,
+         Outstate, Room.Board, Books, Personal, PhD, Terminal, S.F.Ratio,
+         perc.alumni, Expend, Grad.Rate, AcceptanceRate, EnrollmentRate)
+
+# Calculate the correlation matrix
+correlation_matrix <- cor(numerical_data)
+
+# Create a heatmap of the correlation matrix
+corrplot(correlation_matrix, method = "color", type = "lower", 
+         tl.col = "black", tl.srt = 45, 
+         addCoef.col = "black", number.cex = 0.7, 
+         col = colorRampPalette(c("blue", "white", "red"))(200))
+
+png("correlation_heatmap.png", width = 800, height = 800)
+corrplot(correlation_matrix, method = "color", type = "lower", 
+         tl.col = "black", tl.srt = 45, 
+         addCoef.col = "black", number.cex = 0.7, 
+         col = colorRampPalette(c("blue", "white", "red"))(200))
+dev.off()
+
+# Do private school alumni donate more?
+# Calculate summary statistics for alumni donation rates
+summary_stats <- data %>%
+  group_by(Type_of_institution) %>%
+  summarise(
+    mean_donation_rate = mean(perc.alumni, na.rm = TRUE),
+    median_donation_rate = median(perc.alumni, na.rm = TRUE),
+    sd_donation_rate = sd(perc.alumni, na.rm = TRUE)
+  )
+
+print(summary_stats)
+
+# Visualize the comparison of alumni donation rates between private and public institutions
+p <- ggplot(data, aes(x = Type_of_institution, y = perc.alumni, fill = Type_of_institution)) +
+  geom_boxplot() +
+  labs(title = "Alumni Donation Rates by Institution Type",
+       x = "Type of Institution",
+       y = "Alumni Donation Rate (%)") +
+  scale_fill_manual(values = c("Private" = "skyblue", "Public" = "lightgreen"))
+
+print(p)
+
+# Save the plot to a file
+ggsave("alumni_donation_rates_by_institution_type.png", p)
+
+# Yes they do.
+
+# Now let's answer a final question that we will use a model to solve.
+# How does the expenditure per student influence the graduation rate, and does this relationship vary between public and private institutions?
+
+
+p <- ggplot(filtered_data, aes(x = Expend, y = Grad.Rate, color = Type_of_institution)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Expenditure vs. Graduation Rate by Institution Type",
+       x = "Expenditure per Student ($)",
+       y = "Graduation Rate (%)") +
+  theme_minimal()
+
+
+# Separate data for public and private institutions
+public_data <- filtered_data %>% filter(Type_of_institution == "Public")
+private_data <- filtered_data %>% filter(Type_of_institution == "Private")
+
+# Linear regression model for public institutions
+public_model <- lm(Grad.Rate ~ Expend, data = public_data)
+summary(public_model)
+
+# Linear regression model for private institutions
+private_model <- lm(Grad.Rate ~ Expend, data = private_data)
+summary(private_model)
+
+# Comparing the models
+stargazer(public_model, private_model, type = "text", 
+          title = "Regression Results: Graduation Rate vs. Expenditure",
+          column.labels = c("Public Institutions", "Private Institutions"),
+          covariate.labels = c("Expenditure per Student ($)"),
+          dep.var.labels = "Graduation Rate (%)",
+          no.space = TRUE)

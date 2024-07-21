@@ -1,0 +1,190 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Questions we wish to answer through this EDA
+# 
+# 1. How do the number of applications, acceptances, and enrollments vary across institutions?
+# 2. What is the acceptance rate and enrollment rate for each institution, and how do these rates vary 
+#    between private and public institutions?
+# 3. What is the relationship between the percentage of students in the top 10% and top 25% of their high school class and the acceptance rate?
+# 4. How does the student-to-faculty ratio impact the graduation rate?  
+
+
+# Explanation of the data:
+# - Apps: Number of applications received
+# - Accept: Number of applications accepted
+# - Enroll: Number of new students enrolled
+# - Top10perc: Percentage of new students from top 10% of high school class
+# - Top25perc: Percentage of new students from top 25% of high school class
+# - F.Undergrad: Number of full-time undergraduates
+# - P.Undergrad: Number of part-time undergraduates
+# - Outstate: Out-of-state tuition
+# - Room.Board: Room and board costs
+# - Books: Estimated book costs
+# - Personal: Estimated personal spending
+# - PhD: Percentage of faculty with Ph.D.’s
+# - Terminal: Percentage of faculty with terminal degree
+# - S.F.Ratio: Student/faculty ratio
+# - perc.alumni: Percentage of alumni who donate
+# - Expend: Instructional expenditure per student
+# - Grad.Rate: Graduation rate
+
+# And then we add some more columns:
+#   AcceptanceRate
+#   EnrollmentRate
+#   Type_of_institution
+
+
+
+
+# Load necessary libraries
+````{r}
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(gridExtra)
+library(corrplot)
+
+````
+# Load the data
+
+```{r}
+data <- read.csv('Kmeans_assignment_data.csv')
+```
+
+
+# View the structure of the dataset
+```{r}
+str(data)
+```
+
+# Check for NA values
+```[r]
+colSums(is.na(data))
+```
+
+
+
+
+
+# Data Wrangling
+# Create new columns for acceptance rate and enrollment rate
+
+
+
+data <- data %>%
+  mutate(AcceptanceRate = Accept / Apps * 100,
+         EnrollmentRate = Enroll / Accept * 100)
+
+
+
+# Creating a new column for type of instituiton.
+data <- data %>%
+  mutate(Type_of_institution = ifelse(Private == "Yes", "Private", "Public"))
+
+
+# Visual EDA
+# Plot the distribution of numerical variables
+
+
+
+p1 <- ggplot(data, aes(x = Apps)) + 
+  geom_histogram(binwidth = 500, fill = "blue", color = "black") + 
+  labs(title = "Distribution of Applications", x = "Applications", y = "Frequency")
+
+print(p1)
+
+
+p2 <- ggplot(data, aes(x = Accept)) + 
+  geom_histogram(binwidth = 500, fill = "green", color = "black") + 
+  labs(title = "Distribution of Acceptances", x = "Acceptances", y = "Frequency")
+
+
+
+
+print(p2)
+
+p3 <- ggplot(data, aes(x = Enroll)) + 
+  geom_histogram(binwidth = 200, fill = "red", color = "black") + 
+  labs(title = "Distribution of Enrollments", x = "Enrollments", y = "Frequency")
+
+print(p3)
+
+p4 <- ggplot(data, aes(x = AcceptanceRate)) + 
+  geom_histogram(binwidth = 5, fill = "purple", color = "black") + 
+  labs(title = "Distribution of Acceptance Rate", x = "Acceptance Rate (%)", y = "Frequency")
+
+print(p4)
+
+p5 <- ggplot(data, aes(x = EnrollmentRate)) + 
+  geom_histogram(binwidth = 5, fill = "orange", color = "black") + 
+  labs(title = "Distribution of Enrollment Rate", x = "Enrollment Rate (%)", y = "Frequency")
+
+print(p5)
+
+p6 <- ggplot(data, aes(x = Grad.Rate)) + 
+  geom_histogram(binwidth = 5, fill = "cyan", color = "black") + 
+  labs(title = "Distribution of Graduation Rate", x = "Graduation Rate (%)", y = "Frequency")
+
+print(p6)
+
+grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 2)
+
+# Boxplots of Applications, Acceptances, and Enrollments by institution type
+p7 <- ggplot(data, aes(x = Type_of_institution, y = Apps)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(title = "Applications by Institution Type", x = "Institution Type", y = "Applications")
+
+print(p7)
+
+p8 <- ggplot(data, aes(x = Type_of_institution, y = Accept)) +
+  geom_boxplot(fill = "lightgreen") +
+  labs(title = "Acceptances by Institution Type", x = "Institution Type", y = "Acceptances")
+
+print(p8)
+
+p9 <- ggplot(data, aes(x = Type_of_institution, y = Enroll)) +
+  geom_boxplot(fill = "lightcoral") +
+  labs(title = "Enrollments by Institution Type", x = "Institution Type", y = "Enrollments")
+
+print(p9)
+
+grid.arrange(p7, p8, p9, ncol = 3)
+
+# Scatter plots to investigate relationships
+p10 <- ggplot(data, aes(x = Top10perc, y = AcceptanceRate)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Acceptance Rate vs. Top 10% High School Class Percentage", x = "Top 10% High School Class (%)", y = "Acceptance Rate (%)")
+
+print(p10)
+
+p11 <- ggplot(data, aes(x = Top25perc, y = AcceptanceRate)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(title = "Acceptance Rate vs. Top 25% High School Class Percentage", x = "Top 25% High School Class (%)", y = "Acceptance Rate (%)")
+
+print(p11)
+
+p12 <- ggplot(data, aes(x = S.F.Ratio, y = Grad.Rate)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "purple") +
+  labs(title = "Graduation Rate vs. Student-to-Faculty Ratio", x = "Student-to-Faculty Ratio", y = "Graduation Rate (%)")
+
+print(p12)
+
+grid.arrange(p10, p11, p12, ncol = 2)
+
+# Save plots to files
+ggsave("distribution_of_applications.png", p1)
+ggsave("distribution_of_acceptances.png", p2)
+ggsave("distribution_of_enrollments.png", p3)
+ggsave("distribution_of_acceptance_rate.png", p4)
+ggsave("distribution_of_enrollment_rate.png", p5)
+ggsave("distribution_of_graduation_rate.png", p6)
+ggsave("applications_by_institution_type.png", p7)
+ggsave("acceptances
